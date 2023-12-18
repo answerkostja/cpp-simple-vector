@@ -7,6 +7,7 @@
 #include "array_ptr.h"
 
 
+
 class ReserveProxyObj {
 private:
 	size_t capacity_;
@@ -30,14 +31,13 @@ public:
 	using Iterator = Type*;
 	using ConstIterator = const Type*;
 
-	
+
 	SimpleVector() noexcept = default;
 
 	explicit SimpleVector(size_t size) :
 		items_(size), size_(size), capacity_(size) {
 		Fill(begin(), end(), Type{});
 	}
-
 
 
 	SimpleVector(size_t size, const Type& value) :
@@ -71,7 +71,7 @@ public:
 
 	}
 
-	SimpleVector(SimpleVector&& other) :
+	 SimpleVector(SimpleVector&& other) :
 		items_(other.GetCapacity()), size_(other.GetSize()), capacity_(
 			other.GetCapacity()) {
 		std::move(other.begin(), other.end(), begin());
@@ -89,17 +89,7 @@ public:
 
 
 	void PushBack(const Type& item) {
-
-		if (size_ < capacity_) {
-			size_++;
-			items_[size_ - 1] = item;
-		}
-
-		else {
-			size_t new_size = size_ + 1;
-			Resize(new_size);
-			items_[size_ - 1] = item;
-		}
+		Insert(end(), item);
 
 	}
 
@@ -109,19 +99,16 @@ public:
 
 
 	Iterator Insert(ConstIterator pos, const Type& value) {
-		size_t npos = pos - cbegin();
-		if (capacity_ == 0) {
-			SimpleVector<Type> tmp(1);
-			tmp.items_[0] = value;
-			swap(tmp);
-		}
-		else if (size_ < capacity_) {
+		assert(pos <= end() && pos >= begin());
+		int npos = pos - cbegin();
+		if (size_ < capacity_) {
 			std::move(begin() + npos, end(), begin() + npos + 1);
 			items_[npos] = value;
 			size_++;
 		}
 		else {
-			SimpleVector<Type> tmp(capacity_ * 2);
+			size_t capacity = (capacity_ == 0) ? 1 : capacity_ * 2;
+			SimpleVector<Type> tmp(capacity);
 			tmp.Resize(size_ + 1);
 			std::move(cbegin(), pos, tmp.begin());
 			tmp.items_[npos] = value;
@@ -131,24 +118,21 @@ public:
 		return begin() + npos;
 	}
 
+
 	Iterator Insert(Iterator pos, Type&& value) {
-		size_t npos = pos - cbegin();
-		if (capacity_ == 0) {
-			ArrayPtr<Type> temp(1);
-			temp[0] = std::move(value);
-			items_.swap(temp);
-			size_ = 1;
-			capacity_ = 1;
-		}
-		else if (size_ < capacity_) {
+		assert(pos<=end() && pos>=begin());
+		int npos = pos - cbegin();
+		 if (size_ < capacity_) {
 			std::move(begin() + npos, end(), begin() + npos + 1);
 			items_[npos] = std::move(value);
 			size_++;
 		}
 		else {
-			ArrayPtr<Type> temp(capacity_ * 2);
+			size_t capacity = (capacity_ == 0) ? 1 : capacity_ * 2;
+			
+			ArrayPtr<Type> temp(capacity);
 
-			for (size_t i = 0; i < capacity_ * 2; ++i) {
+			for (size_t i = 0; i < capacity; ++i) {
 				temp[i] = std::move(Type{});
 			}
 			SimpleVector<Type> tmp;
@@ -157,7 +141,7 @@ public:
 			tmp.items_[npos] = std::move(value);
 			std::move(pos, end(), tmp.begin() + npos + 1);
 			tmp.size_ = ++size_;
-			tmp.capacity_ = capacity_ * 2;
+			tmp.capacity_ = capacity;
 			swap(tmp);
 		}
 
@@ -170,7 +154,8 @@ public:
 	}
 
 	Iterator Erase(ConstIterator pos) {
-		size_t index = pos - cbegin();
+		assert(pos <= end() && pos >= begin());
+		int index = pos - cbegin();
 		if (!IsEmpty()) {
 			std::move(begin() + index + 1, end(), begin() + index);
 			--size_;
@@ -197,10 +182,12 @@ public:
 	}
 
 	Type& operator[](size_t index) noexcept {
+		assert(index <= size_);
 		return items_[index];
 	}
 
 	const Type& operator[](size_t index) const noexcept {
+		assert(index <= size_);
 		return items_[index];
 	}
 
@@ -210,29 +197,24 @@ public:
 		return items_[index];
 	}
 
-
 	const Type& At(size_t index) const {
 		if (index >= size_)
 			throw std::out_of_range("out_of_range");
 		return items_[index];
 	}
 
-
 	void Clear() noexcept {
 		size_ = 0;
 	}
-
 
 	void Resize(size_t new_size) {
 
 		if (new_size < size_)
 			size_ = new_size;
-
 		if (new_size <= capacity_) {
 			FillWithDefault(end(), begin() + new_size);
 			size_ = new_size;
 		}
-
 		if (new_size > capacity_) {
 
 			size_t new_capacity = std::max(new_size, capacity_ * 2);
@@ -249,7 +231,6 @@ public:
 
 	void Reserve(size_t new_capacity) {
 		if (new_capacity > capacity_) {
-			//Создаём новый массив
 			ArrayPtr<Type> new_items(new_capacity);
 			std::move(begin(), end(), new_items.Get());
 			items_.swap(new_items);
@@ -285,7 +266,7 @@ private:
 	size_t size_ = 0;
 	size_t capacity_ = 0;
 
-void Fill(Iterator first, Iterator last, Type value)
+	void Fill(Iterator first, Iterator last, Type value)
 	{
 		while (first != last)
 		{
@@ -293,13 +274,13 @@ void Fill(Iterator first, Iterator last, Type value)
 			first++;
 		}
 	}
-void FillWithDefault(Iterator first, Iterator last){
-while (first != last)
-{
-      *first = Type{};
-       first++;
-}
-}
+	void FillWithDefault(Iterator first, Iterator last) {
+		while (first != last)
+		{
+			*first = Type{};
+			first++;
+		}
+	}
 };
 
 template<typename Type>
@@ -338,4 +319,3 @@ inline bool operator>=(const SimpleVector<Type>& lhs,
 	const SimpleVector<Type>& rhs) {
 	return !(lhs < rhs);
 }
-

@@ -1,4 +1,3 @@
-
 #pragma once
 #include <cassert>
 #include <cstdlib>
@@ -10,7 +9,6 @@ public:
 	
 	ArrayPtr() = default;
 
-	
 	explicit ArrayPtr(size_t size) {
 		if (size == 0)
 			raw_ptr_ = nullptr;
@@ -19,10 +17,11 @@ public:
 		}
 	}
 
-	
 	explicit ArrayPtr(Type* raw_ptr) noexcept : raw_ptr_(raw_ptr) {}
 
 	ArrayPtr(const ArrayPtr&) = delete;
+
+	ArrayPtr(ArrayPtr&&) = delete;
 
 	~ArrayPtr() {
 		delete[] raw_ptr_;
@@ -30,8 +29,10 @@ public:
 
 	ArrayPtr& operator=(const ArrayPtr&) = delete;
 
+	ArrayPtr& operator=(ArrayPtr&&) = delete;
+
 	[[nodiscard]] Type* Release() noexcept {
-		Type* out = raw_ptr_;
+		Type* out = std::move(raw_ptr_);
 		raw_ptr_ = nullptr;
 		return out;
 	}
